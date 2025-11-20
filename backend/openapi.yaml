@@ -1,48 +1,187 @@
 openapi: 3.0.3
 info:
   title: AI Phishing Detector API
+  description: RESTful API for detecting phishing URLs using machine learning and advanced heuristics
   version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
 servers:
   - url: http://localhost:5000
+    description: Development server
+  - url: https://api.phishing-detector.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: User
+    description: User profile management
+  - name: Detection
+    description: Phishing URL detection
+  - name: Admin
+    description: Admin-only endpoints
+
 paths:
+  /api/health:
+    get:
+      summary: Health check endpoint
+      description: Check if the API is running
+      tags: [System]
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
   /api/auth/signup:
     post:
-      summary: User signup
+      summary: Register a new user
+      description: Create a new user account
+      tags: [Authentication]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [name, email, password]
               properties:
-                name: { type: string }
-                email: { type: string, format: email }
-                password: { type: string, format: password }
+                name:
+                  type: string
+                  example: John Doe
+                  minLength: 2
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePass123!
       responses:
-        "201": { description: Created }
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/auth/login:
     post:
-      summary: User login
+      summary: Login user
+      description: Authenticate user and receive JWT token
+      tags: [Authentication]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [email, password]
               properties:
-                email: { type: string, format: email }
-                password: { type: string, format: password }
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123!
       responses:
-        "200": { description: OK }
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/logout:
+    post:
+      summary: Logout user
+      description: Logout user (client-side token removal)
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
   /api/user/profile:
     get:
-      summary: Get profile
-      security: [ { bearerAuth: [] } ]
+      summary: Get user profile
+      description: Retrieve authenticated user's profile
+      tags: [User]
+      security:
+        - bearerAuth: []
       responses:
-        "200": { description: OK }
+        "200":
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
     put:
-      summary: Update profile
-      security: [ { bearerAuth: [] } ]
+      summary: Update user profile
+      description: Update authenticated user's profile information
+      tags: [User]
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -50,47 +189,357 @@ paths:
             schema:
               type: object
               properties:
-                name: { type: string }
-                email: { type: string }
-                currentPassword: { type: string }
-                newPassword: { type: string }
+                name:
+                  type: string
+                  example: John Updated
+                email:
+                  type: string
+                  format: email
+                  example: john.updated@example.com
+                currentPassword:
+                  type: string
+                  format: password
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
       responses:
-        "200": { description: OK }
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/predict:
     post:
-      summary: Predict phishing
+      summary: Analyze URL for phishing
+      description: Detect if a URL is phishing or safe using ML and heuristics
+      tags: [Detection]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [url]
               properties:
-                url: { type: string, format: uri }
+                url:
+                  type: string
+                  format: uri
+                  example: https://example.com
       responses:
-        "200": { description: OK }
+        "200":
+          description: URL analyzed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        example: https://example.com
+                      result:
+                        type: string
+                        enum: [safe, phishing]
+                        example: safe
+                      confidence:
+                        type: number
+                        format: float
+                        minimum: 0
+                        maximum: 1
+                        example: 0.85
+        "400":
+          description: Invalid URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "503":
+          description: Model not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/history:
     get:
-      summary: Get user history
-      security: [ { bearerAuth: [] } ]
+      summary: Get scan history
+      description: Retrieve authenticated user's URL scan history
+      tags: [Detection]
+      security:
+        - bearerAuth: []
       responses:
-        "200": { description: OK }
+        "200":
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HistoryItem'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/admin/stats:
     get:
-      summary: Admin stats
-      security: [ { bearerAuth: [] } ]
+      summary: Get system statistics
+      description: Retrieve system-wide statistics (admin only)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
       responses:
-        "200": { description: OK }
-  /api/admin/retrain:
+        "200":
+          description: Stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      total_users:
+                        type: integer
+                        example: 100
+                      total_scans:
+                        type: integer
+                        example: 5000
+                      phishing_detected:
+                        type: integer
+                        example: 1200
+                      model_version:
+                        type: string
+                        example: v1.0
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/history:
+    get:
+      summary: Get all users' history
+      description: Retrieve all scan history (admin only)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HistoryItem'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/dataset:
+    get:
+      summary: Get dataset information
+      description: Retrieve information about the training dataset (admin only)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dataset information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
     post:
-      summary: Start retrain (placeholder)
-      security: [ { bearerAuth: [] } ]
+      summary: Upload dataset
+      description: Upload a new phishing dataset for training (admin only)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
       responses:
-        "200": { description: OK }
+        "200":
+          description: Dataset uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        role:
+          type: string
+          enum: [user, admin]
+          example: user
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-01-01T00:00:00Z
+
+    HistoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        url:
+          type: string
+          example: https://example.com
+        result:
+          type: string
+          enum: [safe, phishing]
+          example: safe
+        confidence:
+          type: number
+          format: float
+          example: 0.85
+        date:
+          type: string
+          format: date-time
+          example: 2025-01-01T00:00:00Z
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Logged in
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            user:
+              $ref: '#/components/schemas/User'
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation successful
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error message
+        error:
+          type: string
+          example: Detailed error information
 

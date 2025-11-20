@@ -1,15 +1,22 @@
-from flask import Flask, jsonify
-app = Flask(__name__)
-@app.route('/')
-def home():
-    return {'message': 'AI Phishing Detector Backend is running!'}, 200
+"""
+AI Phishing Detector - Backend Application
+Entry point for the Flask application.
+"""
 
 from config import Config
 from app import create_app
 
+# Create Flask application instance
 app = create_app()
+
 # Apply environment-based configuration
 app.config.from_object(Config)
 
 if __name__ == "__main__":
-	app.run(host="0.0.0.0", port=5000, debug=app.config.get("DEBUG", False))
+	# Run the application
+	# In production, use a proper WSGI server like Gunicorn
+	app.run(
+		host="0.0.0.0",
+		port=5000,
+		debug=app.config.get("DEBUG", False)
+	)

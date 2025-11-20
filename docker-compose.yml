@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: phishing-detector-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-jwt-secret}
+      - DATABASE_URL=sqlite:///app.db
+      - MODEL_PATH=./phishing_detector_model.joblib
+      - CORS_ORIGINS=http://localhost:3000,http://localhost
+      - FLASK_ENV=production
+      - DEBUG=False
+    volumes:
+      - ./backend/instance:/app/instance
+      - ./backend/phishing_detector_model.joblib:/app/phishing_detector_model.joblib
+    networks:
+      - phishing-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: phishing-detector-frontend
+    ports:
+      - "80:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+    networks:
+      - phishing-network
+    restart: unless-stopped
+
+networks:
+  phishing-network:
+    driver: bridge
+
+volumes:
+  backend-data:
